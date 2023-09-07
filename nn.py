@@ -25,8 +25,8 @@ def Loss_function(predicted, actual, nr_correct):
 def Cost_function_deravitive(output,label,n):
     return (1/n)*(output-label)
 
-def Sigmoid_deravitive(delta_o,out_lay_weight,hid_lay_output):
-    return np.dot(delta_o,out_lay_weight.T)*hid_lay_output*(1-hid_lay_output)
+def Sigmoid_deravitive(hid_lay_output):
+    return hid_lay_output*(1-hid_lay_output)
 class LayerDense:
     def __init__(self, n_inputs, n_neurons) -> None:
         self.n_neurons = n_neurons
@@ -80,18 +80,21 @@ class MiniBatch_SGD:
         self.hidden_output_layer.output = activation_Sigmoid(self.hidden_output_layer.output)
         self.nr_correct = Loss_function(self.hidden_output_layer.output, mini_batch_Y, self.nr_correct)
 
-    def back_prop(self,mini_batch_X,mini_batch_Y):
-        #delta_o = (self.hidden_output_layer.output - mini_batch_Y) / self.mini_batch_size  # deravitive of cost function
-        delta_o =Cost_function_deravitive(self.hidden_output_layer.output,mini_batch_Y,self.mini_batch_size)
+    def update_weights(self, delta_o, delta_h, mini_batch_X):
         self.hidden_output_layer.weights += -self.step_size * np.dot(self.input_hidden_layer.output.T, delta_o)
         self.hidden_output_layer.biases += -self.step_size * np.sum(delta_o, axis=0, keepdims=True)
-        delta_hidden = Sigmoid_deravitive(delta_o,self.hidden_output_layer.weights, self.input_hidden_layer.output)
         #delta_hidden = np.dot(delta_o, self.hidden_output_layer.weights.T) * self.input_hidden_layer.output * (
         #        1 - self.input_hidden_layer.output)
 
-        self.input_hidden_layer.weights += -self.step_size * np.dot(mini_batch_X.T, delta_hidden)
+        self.input_hidden_layer.weights += -self.step_size * np.dot(mini_batch_X.T, delta_h)
 
-        self.input_hidden_layer.biases += -self.step_size * np.sum(delta_hidden, axis=0, keepdims=True)
+        self.input_hidden_layer.biases += -self.step_size * np.sum(delta_h, axis=0, keepdims=True)
+
+    def back_prop(self,mini_batch_X,mini_batch_Y):
+        delta_o =Cost_function_deravitive(self.hidden_output_layer.output,mini_batch_Y,self.mini_batch_size)   # gradient1
+        delta_hidden = np.dot(delta_o,self.hidden_output_layer.weights.T)*Sigmoid_deravitive(self.input_hidden_layer.output) #gradient2
+        self.update_weights(delta_o, delta_hidden, mini_batch_X)
+
 
     def metrics(self,epoch):
         print(f"\t\t\tEpoch #{epoch} Accuracy : {round((self.nr_correct / 50000) * 100, 3)}%")
